@@ -4,6 +4,7 @@ from web.services.extraction_service import ExtractionService
 from web.utils.security import USERS, User
 import threading
 from datetime import datetime, timedelta
+from web.utils.etl_state import etl_state
 
 # Blueprint
 extraction_bp = Blueprint(
@@ -90,3 +91,9 @@ def run():
 @login_required
 def status():
     return jsonify({"is_running": is_running})
+
+@extraction_bp.route("/progress")
+@login_required
+def progress():
+
+    return jsonify(etl_state)

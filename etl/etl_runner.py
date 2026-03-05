@@ -1,38 +1,50 @@
-from etl.sap_extractor import extract_table
-from database.db_writer import save_to_database
-from database.etl_control import log_start, log_finish
-from etl.table_jobs import BODEGA_TABLES
+from extractor.sap_extractor import extract_table
+from db.staging_loader import load_staging
+from db.merge_runner import run_merges
+from db.db_connection import get_engine
+from web.utils.etl_state import etl_state, log
+
 import json
-import time
 
 
 def run_bodega_job():
 
-    with open("config.json") as config_file:
-        config = json.load(config_file)
+    engine = get_engine()
 
-    fields_config = config["fields"]
+    with open("config.json") as f:
+        config = json.load(f)
 
-    for table in BODEGA_TABLES:
+    tables = config["tables"]
 
-        start = time.time()
+    etl_state["running"] = True
+    etl_state["progress"] = {}
 
-        try:
+    for table in tables:
 
-            log_start(table)
+        source = table["source"]
+        target = table["target"]
+        fields = config["fields"][source]
 
-            fields = fields_config[table]
+        etl_state["current_table"] = source
 
-            print(f"Extrayendo {table}")
+        log(f"Extrayendo {source}")
 
-            df = extract_table(table, fields)
+        df = extract_table(source, fields)
 
-            save_to_database(df, table)
+        count = len(df)
 
-            duration = int(time.time() - start)
+        log(f"{count} registros extraídos de {source}")
 
-            log_finish(table, len(df), duration)
+        load_staging(df, target, engine)
 
-        except Exception as e:
+        etl_state["progress"][source] = count
 
-            log_finish(table, 0, 0, str(e))
+        log(f"{source} cargado en staging")
+
+    log("Ejecutando MERGES")
+
+    run_merges()
+
+    log("ETL finalizado")
+
+    etl_state["running"] = False

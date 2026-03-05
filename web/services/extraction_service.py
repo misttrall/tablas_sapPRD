@@ -1,17 +1,13 @@
-import sys
-import os
-
-# Permite importar main.py desde la raíz
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
-
-import main
+from etl.etl_runner import run_bodega_job
 
 
 class ExtractionService:
 
     @staticmethod
     def run_full_extraction():
-        """
-        Ejecuta el flujo productivo completo sin modificarlo.
-        """
-        main.main()
+
+        print("Iniciando ETL...")
+
+        run_bodega_job()
+
+        print("ETL finalizado")
