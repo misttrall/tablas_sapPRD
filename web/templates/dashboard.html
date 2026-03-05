@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Extracción SAP</title>
+    <style>
+        body { margin:0; font-family:'Segoe UI',sans-serif; background:#F1F5F9; color:#0F172A; }
+        .navbar { background:#1E293B; color:white; padding:16px 40px; display:flex; justify-content:space-between; align-items:center; }
+        .logo { font-weight:600; font-size:18px; }
+        .right-section a { color:white; font-weight:500; margin-left:15px; text-decoration:none; }
+        .right-section a:hover { text-decoration:underline; }
+        .container { padding:40px 20px; max-width:800px; margin:30px auto; background:white; border-radius:14px; box-shadow:0 10px 25px rgba(0,0,0,0.08); }
+        h2 { margin-bottom:20px; }
+        .btn-primary { padding:12px 20px; border:none; border-radius:10px; background:#2563EB; color:white; font-weight:600; cursor:pointer; transition:all 0.2s ease; margin-top:10px; }
+        .btn-primary:hover { background:#1D4ED8; transform:translateY(-2px); }
+        .btn-primary:disabled { opacity:0.6; cursor:not-allowed; transform:none; }
+        #status { margin-top:15px; font-weight:500; }
+    </style>
+    <script>
+        function runExtraction() {
+            const btn = document.getElementById("runBtn");
+            btn.disabled = true;
+
+            fetch("/run", { method: "POST" })
+            .then(res => res.json())
+            .then(data => {
+                const statusEl = document.getElementById("status");
+
+                if (data.status === "cooldown") {
+                    statusEl.innerText = "Debe esperar " + data.remaining + " segundos";
+                    btn.disabled = false;
+                } else if (data.status === "running" || data.status === "started") {
+                    statusEl.innerText = data.status === "running" ? "Extracción ya en ejecución" : "Extracción iniciada correctamente";
+                    pollExtractionStatus();
+                }
+            });
+        }
+
+        function pollExtractionStatus() {
+            const btn = document.getElementById("runBtn");
+            const statusEl = document.getElementById("status");
+
+            const interval = setInterval(() => {
+                fetch("/status")
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.is_running) {
+                        statusEl.innerText = "Extracción finalizada";
+                        btn.disabled = false;
+                        clearInterval(interval);
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1000);
+                    }
+                });
+            }, 10000); // revisa cada 10 segundos
+        }
+    </script>
+</head>
+<body>
+
+    <div class="navbar">
+        <div class="logo">SAP Extraction</div>
+        <div class="right-section">
+            <a href="/logout">Cerrar sesión</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Panel de Extracción SAP</h2>
+        {% if last_execution %}
+            <p style="color:#16A34A; font-weight:600;">
+                    Ultima extracción realizada: {{ last_execution }}
+            </p>
+        {% else %}
+            <p style="color:#64748B;">
+                No se ha realizado ninguna extracción aún.
+            </p>
+        {% endif %}
+        <p>Usuario: {{ user }}</p>
+
+        <button id="runBtn" class="btn-primary" onclick="runExtraction()" {% if is_running %}disabled{% endif %}>
+            Ejecutar extracción completa
+        </button>
+
+        <p id="status">{% if is_running %}Extracción en ejecución{% endif %}</p>
+    </div>
+
+</body>
+</html>
