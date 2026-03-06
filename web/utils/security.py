@@ -2,7 +2,7 @@ from flask_login import UserMixin
 
 USERS = {
     "ahurtado@invertec.cl": "Invertec.26",
-    "admin": "sap2024"
+    "admin": "sap2026"
 }
 
 class User(UserMixin):
