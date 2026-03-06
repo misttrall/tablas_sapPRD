@@ -56,6 +56,46 @@
             }, 10000); // revisa cada 10 segundos
         }
     </script>
+    
+    <script>
+    function pollExtractionStatus() {
+
+    const btn = document.getElementById("runBtn");
+    const statusEl = document.getElementById("status");
+
+    const interval = setInterval(() => {
+
+        fetch("/progress")
+        .then(res => res.json())
+        .then(data => {
+
+            if (data.running) {
+
+                statusEl.innerText =
+                    "Tabla: " + data.table +
+                    " | Paso: " + data.step +
+                    " | Progreso: " + data.progress + "%";
+
+            } else {
+
+                statusEl.innerText = "Extracción finalizada";
+                btn.disabled = false;
+
+                clearInterval(interval);
+
+                setTimeout(() => {
+                    location.reload();
+                }, 2000);
+
+            }
+
+        });
+
+    }, 3000);
+
+}
+        
+    </script>
 </head>
 <body>
 

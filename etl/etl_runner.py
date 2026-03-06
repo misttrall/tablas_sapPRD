@@ -5,10 +5,9 @@ from db.db_connection import get_engine
 from web.utils.etl_state import etl_state, log
 
 import json
-
+import time
 
 def run_bodega_job():
-
     engine = get_engine()
 
     with open("config.json") as f:
@@ -16,35 +15,54 @@ def run_bodega_job():
 
     tables = config["tables"]
 
+    # reset estado ETL
     etl_state["running"] = True
+    etl_state["current_table"] = None
+    etl_state["step"] = "starting"
     etl_state["progress"] = {}
+    etl_state["percentage"] = 0
 
-    for table in tables:
+    total_tables = len(tables)
+    processed_tables = 0
 
-        source = table["source"]
-        target = table["target"]
-        fields = config["fields"][source]
+    try:
+        for table in tables:
+            source = table["source"]
+            target = table["target"]
+            fields = config["fields"][source]
 
-        etl_state["current_table"] = source
+            etl_state["current_table"] = source
+            etl_state["step"] = "extract"
+            log(f"Extrayendo {source}...")
 
-        log(f"Extrayendo {source}")
+            df = extract_table(source, fields)
+            count = len(df)
+            log(f"{count} registros extraídos de {source}")
 
-        df = extract_table(source, fields)
+            # Actualizar progreso parcial
+            etl_state["progress"][source] = count
+            etl_state["percentage"] = int((processed_tables / total_tables) * 80)
 
-        count = len(df)
+            # Cargar en staging
+            etl_state["step"] = "staging"
+            load_staging(df, target, engine)
+            log(f"{source} cargado en staging")
 
-        log(f"{count} registros extraídos de {source}")
+            processed_tables += 1
+            etl_state["percentage"] = int((processed_tables / total_tables) * 80)
 
-        load_staging(df, target, engine)
+        # MERGE final
+        etl_state["step"] = "merge"
+        log("Ejecutando MERGES...")
+        run_merges()
+        etl_state["percentage"] = 100
+        log("ETL finalizado correctamente")
 
-        etl_state["progress"][source] = count
+    except Exception as e:
+        log(f"ERROR ETL: {str(e)}")
+        etl_state["step"] = "error"
+        raise
 
-        log(f"{source} cargado en staging")
-
-    log("Ejecutando MERGES")
-
-    run_merges()
-
-    log("ETL finalizado")
-
-    etl_state["running"] = False
+    finally:
+        etl_state["running"] = False
+        etl_state["current_table"] = None

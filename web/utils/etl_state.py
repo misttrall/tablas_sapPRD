@@ -1,16 +1,11 @@
+# etl_state.py
+def log(msg):
+    print(msg)  # puedes reemplazar con logging si quieres
+
 etl_state = {
     "running": False,
     "current_table": None,
-    "progress": {},
-    "logs": []
+    "step": None,
+    "progress": {},   # cantidad de registros por tabla
+    "percentage": 0
 }
-
-
-def log(message):
-
-    print(message)
-
-    etl_state["logs"].append(message)
-
-    if len(etl_state["logs"]) > 100:
-        etl_state["logs"].pop(0)

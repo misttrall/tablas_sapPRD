@@ -1,17 +1,17 @@
 {
   "sap": {
-    "user": "aramirez",
-    "password": "Invertec.26",
-    "ashost": "192.168.0.9",
+    "user": "ETL_INVERTEC",
+    "password": "Invertec.24$",
+    "ashost": "192.168.0.6",
     "sysnr": "00",
     "client": "300"
   },
 
   "database": {
-    "user": "usuario_QA",
-    "password": "Invertec.26",
+    "user": "sa",
+    "password": "Invertek23",
     "server": "192.168.1.12",
-    "database": "tablas_sapQA"
+    "database": "tablas_sap"
   },
 
     "tables": [

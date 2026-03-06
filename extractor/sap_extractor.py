@@ -2,9 +2,7 @@ import json
 from pyrfc import Connection
 import pandas as pd
 
-
-def extract_table(table, fields):
-
+def extract_table(table, fields, batch_size=30000):
     with open("config.json") as config_file:
         config = json.load(config_file)
 
@@ -16,12 +14,10 @@ def extract_table(table, fields):
         client=config['sap']['client']
     )
 
-    batch_size = 5000
     rows = []
     offset = 0
 
     while True:
-
         result = sap_conn.call(
             "RFC_READ_TABLE",
             QUERY_TABLE=table,
@@ -32,7 +28,6 @@ def extract_table(table, fields):
         )
 
         data = result["DATA"]
-
         if not data:
             break
 
@@ -40,14 +35,12 @@ def extract_table(table, fields):
             values = [v.strip() for v in row["WA"].split("|")]
             rows.append(values[:len(fields)])
 
-        print(f"{table}: {len(rows)} registros extraídos")
-
+        print(f"{table}: {len(rows)} registros extraídos (offset {offset})")
         offset += batch_size
 
     sap_conn.close()
 
     df = pd.DataFrame(rows, columns=fields)
-
-    df = df.map(lambda x: x.strip() if isinstance(x, str) else x)
+    df = df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
 
     return df
