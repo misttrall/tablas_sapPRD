@@ -14,47 +14,46 @@ PRIMARY_KEYS = {
 
 
 def build_merge(table, target, fields):
-
+    """
+    Construye un SQL MERGE seguro:
+    - Evita insertar duplicados de staging
+    - Actualiza registros existentes
+    - Inserta solo los nuevos
+    """
     keys = PRIMARY_KEYS[table]
 
-    # condición ON
+    # Condición ON para el MERGE
     on_clause = " AND ".join([f"target.{k} = src.{k}" for k in keys])
 
-    # campos update (sin claves)
+    # Campos a actualizar (excluyendo la clave primaria)
     update_fields = [f for f in fields if f not in keys]
-
-    update_clause = ",\n            ".join(
-        [f"{f} = src.{f}" for f in update_fields]
-    )
+    update_clause = ",\n        ".join([f"{f} = src.{f}" for f in update_fields])
 
     insert_fields = ", ".join(fields)
-
     insert_values = ", ".join([f"src.{f}" for f in fields])
 
+    # SQL MERGE con CTE que elimina duplicados en staging
     merge_sql = f"""
     MERGE {target} AS target
     USING (
         SELECT *
         FROM (
             SELECT *,
-            ROW_NUMBER() OVER (
-                PARTITION BY {",".join(keys)}
-                ORDER BY {",".join(keys)}
-            ) AS rn
-            FROM stg_{target}
+                ROW_NUMBER() OVER (
+                    PARTITION BY {",".join(keys)}
+                    ORDER BY {",".join(keys)}
+                ) AS rn
+            FROM stg_{table}_Data
         ) t
         WHERE rn = 1
     ) AS src
-
     ON {on_clause}
-
     WHEN MATCHED THEN
-    UPDATE SET
+        UPDATE SET
         {update_clause}
-
     WHEN NOT MATCHED THEN
-    INSERT ({insert_fields})
-    VALUES ({insert_values});
+        INSERT ({insert_fields})
+        VALUES ({insert_values});
     """
 
     return merge_sql

@@ -2,6 +2,7 @@ from flask import Flask
 from flask_login import LoginManager
 from web.controllers.extraction_controller import extraction_bp
 from web.utils.security import User
+from etl.etl_worker import start_auto_etl
 
 app = Flask(__name__)
 app.secret_key = "db45526b4f57b16a65c3c9c70421101a05161ff16822e32c00c9fcfa0c242ffe"
@@ -17,5 +18,6 @@ def load_user(user_id):
 app.register_blueprint(extraction_bp)
 
 if __name__ == "__main__":
+    start_auto_etl()
     app.run(host="0.0.0.0", port=5000)
 
